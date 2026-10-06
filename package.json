@@ -1,6 +1,6 @@
 {
   "name": "com.outsystems.plugins.debuglogs",
-  "version": "0.0.4",
+  "version": "0.0.5-moxie.1",
   "description": "Cordova plugin for OutSystems Apps",
   "cordova": {
     "id": "com.outsystems.plugins.debuglogs",

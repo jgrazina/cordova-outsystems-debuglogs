@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android" id="com.outsystems.plugins.debuglogs" version="0.0.4">
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android" id="com.outsystems.plugins.debuglogs" version="0.0.5-moxie.1">
   <name>OSDebugLogs</name>
   <description>Cordova plugin for OutSystems Apps</description>
 
@@ -13,7 +13,10 @@
     <clobbers target="cordova.plugins.OSDebugLogs"/>
   </js-module>
   
-  <dependency id="com.outsystems.plugins.loader"/>
+  <!-- Removed: <dependency id="com.outsystems.plugins.loader"/>
+       Had no url attribute, so Cordova resolved it via the npm registry, where
+       OutSystems plugins are not published -> hard 404 and the build failed.
+       See README-MOXIE.md. -->
   <dependency id="cordova-plugin-console" url="https://github.com/luissilvaos/cordova-plugin-console#outsystems"/>
 
   <platform name="android">    

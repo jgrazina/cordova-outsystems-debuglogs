@@ -6,4 +6,6 @@
 
 -(void)closeConsole:(CDVInvokedUrlCommand*)command;
 
+-(void)logLevel:(CDVInvokedUrlCommand*)command;
+
 @end

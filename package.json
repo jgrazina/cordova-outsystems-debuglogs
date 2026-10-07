@@ -1,9 +1,9 @@
 {
-  "name": "com.outsystems.plugins.debuglogs",
+  "name": "cordova-plugin-outsystems-debuglogs",
   "version": "0.0.5",
   "description": "Cordova plugin for OutSystems Apps",
   "cordova": {
-    "id": "com.outsystems.plugins.debuglogs",
+    "id": "cordova-plugin-outsystems-debuglogs",
     "platforms": [
       "android",
       "ios"

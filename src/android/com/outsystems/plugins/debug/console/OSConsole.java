@@ -12,13 +12,13 @@ import java.util.Iterator;
 public class OSConsole implements OSConsoleFragment.OSUiConsoleInterface, OSConsoleCommands {
     private OSConsoleFragment mConsoleFragment;
     private View mContainer;
-    private ArrayList<String> mEntries;
+    private ArrayList<Entry> mEntries;
     private FragmentManager mFragmentManager;
 
     public OSConsole(Activity paramActivity, View container) {
         this.mContainer = container;
         this.mFragmentManager = paramActivity.getFragmentManager();
-        this.mEntries = new ArrayList();
+        this.mEntries = new ArrayList<Entry>();
     }
 
     public void clear() {
@@ -43,10 +43,14 @@ public class OSConsole implements OSConsoleFragment.OSUiConsoleInterface, OSCons
     }
 
     public void log(String paramString) {
+        log(paramString, LEVEL_LOG);
+    }
+
+    public void log(String paramString, int level) {
         if ((this.mConsoleFragment != null) && (this.mConsoleFragment.isResumed())) {
-            this.mConsoleFragment.log(paramString);
+            this.mConsoleFragment.log(paramString, level);
         }
-        this.mEntries.add(paramString);
+        this.mEntries.add(new Entry(paramString, level));
     }
 
     public void onClear() {
@@ -58,10 +62,20 @@ public class OSConsole implements OSConsoleFragment.OSUiConsoleInterface, OSCons
     }
 
     public void onReadyToReceiveData() {
-        Iterator localIterator = this.mEntries.iterator();
+        Iterator<Entry> localIterator = this.mEntries.iterator();
         while (localIterator.hasNext()) {
-            String str = (String) localIterator.next();
-            this.mConsoleFragment.log(str);
+            Entry entry = localIterator.next();
+            this.mConsoleFragment.log(entry.message, entry.level);
+        }
+    }
+
+    /** One buffered line and its severity, so replays keep their colour. */
+    private static final class Entry {
+        final String message;
+        final int level;
+        Entry(String message, int level) {
+            this.message = message;
+            this.level = level;
         }
     }
 

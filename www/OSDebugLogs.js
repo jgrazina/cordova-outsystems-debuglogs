@@ -9,6 +9,14 @@ exports.closeConsole = function(success, error) {
 };
 
 /*
+ * Diagnostics: reports whether the console overlay is attached and showing.
+ * Android returns the real view state; on iOS it reports what the JS side knows.
+ */
+exports.getConsoleState = function(success, error) {
+    exec(success, error, "OSDebugLogs", "getConsoleState", []);
+};
+
+/*
  * iOS console capture.
  *
  * Android needs nothing here: the native side intercepts console output through

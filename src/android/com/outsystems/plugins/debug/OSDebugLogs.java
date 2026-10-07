@@ -2,13 +2,17 @@ package com.outsystems.plugins.debug;
 
 import android.app.Activity;
 import android.content.pm.ApplicationInfo;
+import android.graphics.Color;
+import android.os.Build;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
 import android.webkit.ConsoleMessage;
 import android.widget.RelativeLayout;
 
 import com.outsystems.plugins.debug.console.OSConsole;
+import com.outsystems.plugins.debug.console.OSConsoleCommands;
 import com.outsystems.plugins.loader.clients.ChromeClient;
 
 import org.apache.cordova.CallbackContext;
@@ -30,6 +34,9 @@ public class OSDebugLogs extends CordovaPlugin {
 
     /** Id given to the overlay container so the fragment transaction can target it. */
     private static final int CONSOLE_VIEW_ID = 2016;
+
+    /** Matches the background of fragment_console.xml so insets blend in. */
+    private static final int CONSOLE_BACKGROUND = Color.parseColor("#343845");
 
     /**
      * Stands in for org.apache.cordova.BuildConfig.DEBUG, which cordova-android 14
@@ -118,6 +125,11 @@ public class OSDebugLogs extends CordovaPlugin {
             overlay.setVisibility(View.GONE);
             // Raise above the webview even if something re-orders children later.
             overlay.setElevation(1000f);
+            // The overlay fills the content view, which under edge-to-edge extends
+            // behind the status and navigation bars. Paint it the console's own colour
+            // so the inset strips do not show the app through them.
+            overlay.setBackgroundColor(CONSOLE_BACKGROUND);
+            applySystemBarInsets(overlay);
 
             contentView.addView(overlay);
             overlay.bringToFront();
@@ -134,6 +146,49 @@ public class OSDebugLogs extends CordovaPlugin {
         } catch (Exception e) {
             Log.e(TAG, "failed to attach console overlay", e);
         }
+    }
+
+    /** Maps a WebView console severity onto the console's own levels. */
+    private static int levelFor(ConsoleMessage.MessageLevel level) {
+        if (level == null) {
+            return OSConsoleCommands.LEVEL_LOG;
+        }
+        switch (level) {
+            case ERROR:   return OSConsoleCommands.LEVEL_ERROR;
+            case WARNING: return OSConsoleCommands.LEVEL_WARN;
+            case DEBUG:   return OSConsoleCommands.LEVEL_DEBUG;
+            case TIP:     return OSConsoleCommands.LEVEL_INFO;
+            default:      return OSConsoleCommands.LEVEL_LOG;
+        }
+    }
+
+    /**
+     * Pads the overlay by the system bar insets so the console's close/clear buttons are
+     * not hidden behind the status bar, and are not covered by the navigation bar or a
+     * display cutout. This app runs edge-to-edge, so the content view extends behind
+     * both bars and an unpadded overlay puts its top row under the clock and the
+     * wifi/battery icons, which also swallow the taps.
+     */
+    private void applySystemBarInsets(final View overlay) {
+        overlay.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+            @Override
+            public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
+                int left, top, right, bottom;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    android.graphics.Insets bars = insets.getInsets(
+                            WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                    left = bars.left; top = bars.top; right = bars.right; bottom = bars.bottom;
+                } else {
+                    left = insets.getSystemWindowInsetLeft();
+                    top = insets.getSystemWindowInsetTop();
+                    right = insets.getSystemWindowInsetRight();
+                    bottom = insets.getSystemWindowInsetBottom();
+                }
+                v.setPadding(left, top, right, bottom);
+                return insets;
+            }
+        });
+        overlay.requestApplyInsets();
     }
 
     /**
@@ -245,7 +300,8 @@ public class OSDebugLogs extends CordovaPlugin {
             if (OSDebugLogs.this.mOsConsole != null) {
                 String str = String.format("Line %d : %s", consoleMessage.lineNumber(), consoleMessage.message());
                 if (OSDebugLogs.this.mOsConsole.getConsoleInterface() != null) {
-                    OSDebugLogs.this.mOsConsole.getConsoleInterface().log(str);
+                    OSDebugLogs.this.mOsConsole.getConsoleInterface()
+                            .log(str, levelFor(consoleMessage.messageLevel()));
                 }
             }
 

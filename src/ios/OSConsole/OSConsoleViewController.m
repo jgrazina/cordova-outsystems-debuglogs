@@ -5,7 +5,7 @@
 - (IBAction)onCloseBtnTouchUp:(UIButton *)sender;
 
 @property (weak, nonatomic) IBOutlet UITextView *outputTextView;
-@property (strong, nonatomic) NSMutableString* logString;
+@property (strong, nonatomic) NSMutableAttributedString* logString;
 @property (weak, nonatomic) UIViewController* parentVC;
 
 @end
@@ -34,7 +34,6 @@
     [[NSNotificationCenter defaultCenter] removeObserver:self
                                                     name:@"CDVLoggerNotification"
                                                   object:nil];
-    [self.logString setString:@""];
     self.logString = nil;
     
 }
@@ -42,7 +41,7 @@
 
 
 -(void) setup {
-    self.logString = [[NSMutableString alloc ]init];
+    self.logString = [[NSMutableAttributedString alloc] init];
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(receivedRemoteLog:)
                                                  name:@"CDVLoggerNotification"
@@ -53,15 +52,46 @@
     if([notification.name isEqualToString:@"CDVLoggerNotification"]){
         NSDictionary* userInfo = notification.userInfo;
         NSString *output = (NSString*) userInfo[@"message"];
-        [self log:output];
+        NSString *level = (NSString*) userInfo[@"level"];
+        [self log:output level:level];
     }
 }
 
+/** Console palette, matching the Android side. */
++ (UIColor*)colourForLevel:(NSString*)level {
+    if ([level isEqualToString:@"ERROR"]) { return [UIColor colorWithRed:1.00 green:0.42 blue:0.42 alpha:1.0]; }
+    if ([level isEqualToString:@"WARN"])  { return [UIColor colorWithRed:1.00 green:0.82 blue:0.40 alpha:1.0]; }
+    if ([level isEqualToString:@"INFO"])  { return [UIColor colorWithRed:0.50 green:0.82 blue:0.91 alpha:1.0]; }
+    if ([level isEqualToString:@"DEBUG"]) { return [UIColor colorWithRed:0.70 green:0.62 blue:0.86 alpha:1.0]; }
+    return [UIColor colorWithRed:0.90 green:0.90 blue:0.90 alpha:1.0];
+}
+
 -(void)log:(NSString*)output {
-    [self.logString appendString:[NSString stringWithFormat: @"\n%@",output]];
+    [self log:output level:nil];
+}
+
+-(void)log:(NSString*)output level:(NSString*)level {
+    if (output == nil) {
+        return;
+    }
+
+    UIFont *font = self.outputTextView.font;
+    if (font == nil) {
+        font = [UIFont fontWithName:@"Menlo" size:11.0];
+    }
+
+    NSDictionary *attributes = @{
+        NSForegroundColorAttributeName: [OSConsoleViewController colourForLevel:level],
+        NSFontAttributeName: font
+    };
+
+    NSString *line = [NSString stringWithFormat:@"\n%@", output];
+    NSAttributedString *entry = [[NSAttributedString alloc] initWithString:line
+                                                               attributes:attributes];
+    [self.logString appendAttributedString:entry];
 
     if([[_parentVC.view subviews]containsObject: self.view]) {
-        [self.outputTextView setText: [NSString stringWithString:self.logString]];
+        [self.outputTextView setAttributedText: self.logString];
     }
 }
 
@@ -71,8 +101,8 @@
 }
 
 - (IBAction)onClearBtnTouchUp:(UIButton *)sender {
-    [self.outputTextView setText:@""];
-    [self.logString setString:@""];
+    self.logString = [[NSMutableAttributedString alloc] init];
+    [self.outputTextView setAttributedText:self.logString];
 }
 
 - (IBAction)onCloseBtnTouchUp:(UIButton *)sender {
@@ -91,7 +121,15 @@
         }
         
         self.view.backgroundColor = [UIColor whiteColor];
-        self.view.frame = UIEdgeInsetsInsetRect(_parentVC.view.bounds, UIEdgeInsetsZero);
+        // Inset by the safe area so the close/clear buttons are not under the status
+        // bar, notch or home indicator. This app runs without a safe-area layout, so
+        // without this the top row sits beneath the clock and wifi/battery icons,
+        // which also swallow the taps.
+        UIEdgeInsets safe = UIEdgeInsetsZero;
+        if (@available(iOS 11.0, *)) {
+            safe = _parentVC.view.safeAreaInsets;
+        }
+        self.view.frame = UIEdgeInsetsInsetRect(_parentVC.view.bounds, safe);
         
         if(!exists){
             [_parentVC addChildViewController:self];
@@ -166,7 +204,9 @@
 }
 
 -(void)onShow {
-    [self.outputTextView setText: [NSString stringWithString:self.logString]];
+    // Dark ground so the coloured text reads, matching the Android console.
+    self.outputTextView.backgroundColor = [UIColor colorWithRed:0.20 green:0.22 blue:0.27 alpha:1.0];
+    [self.outputTextView setAttributedText: self.logString];
 }
 
 @end

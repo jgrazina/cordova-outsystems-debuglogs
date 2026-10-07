@@ -1,6 +1,9 @@
 package com.outsystems.plugins.debug.console;
 
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.app.Fragment;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -15,6 +18,7 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class OSConsoleFragment extends Fragment implements OSConsoleCommands {
 
@@ -61,6 +65,33 @@ public class OSConsoleFragment extends Fragment implements OSConsoleCommands {
         }
     }
 
+    /**
+     * Puts the whole buffer on the clipboard so a tester can paste it into a mail or
+     * a ticket. This is the point of the console on a device that cannot reach the
+     * platform to ship its logs.
+     */
+    private void copyLogToClipboard() {
+        Activity activity = getActivity();
+        if (activity == null || this.mTextView == null) {
+            return;
+        }
+        CharSequence text = this.mTextView.getText();
+        String payload = (text == null) ? "" : text.toString();
+        try {
+            ClipboardManager clipboard =
+                    (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
+            if (clipboard == null) {
+                Toast.makeText(activity, "Clipboard unavailable", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            clipboard.setPrimaryClip(ClipData.newPlainText("App log", payload));
+            Toast.makeText(activity, "Log copied (" + payload.length() + " chars)",
+                    Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(activity, "Could not copy log", Toast.LENGTH_SHORT).show();
+        }
+    }
+
     public void onAttach(Activity paramActivity) {
         super.onAttach(paramActivity);
     }
@@ -77,8 +108,20 @@ public class OSConsoleFragment extends Fragment implements OSConsoleCommands {
 
         this.mTextView = ((TextView) view.findViewById(txtConsoleId));
 
+        int btnCopyId = view.getResources().getIdentifier("btnCopy","id",getActivity().getPackageName());
+
         final Button btnClear = (Button) view.findViewById(btnClearId);
         final Button btnClose = (Button) view.findViewById(btnCloseId);
+        final Button btnCopy = (Button) view.findViewById(btnCopyId);
+
+        // Null-guarded: an older cached layout would not carry btnCopy.
+        if (btnCopy != null) {
+            btnCopy.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View paramAnonymousView) {
+                    OSConsoleFragment.this.copyLogToClipboard();
+                }
+            });
+        }
 
         btnClear.setOnClickListener(new View.OnClickListener() {
             public void onClick(View paramAnonymousView) {

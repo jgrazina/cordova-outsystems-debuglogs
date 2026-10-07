@@ -35,8 +35,12 @@ public class OSDebugLogs extends CordovaPlugin {
     /** Id given to the overlay container so the fragment transaction can target it. */
     private static final int CONSOLE_VIEW_ID = 2016;
 
-    /** Matches the background of fragment_console.xml so insets blend in. */
-    private static final int CONSOLE_BACKGROUND = Color.parseColor("#343845");
+    /**
+     * Smoky translucent pane. Painted on the overlay rather than in the layout so it
+     * covers the whole screen, including the system bar inset strips that the layout
+     * is padded away from.
+     */
+    private static final int CONSOLE_BACKGROUND = Color.parseColor("#E6121419");
 
     /**
      * Stands in for org.apache.cordova.BuildConfig.DEBUG, which cordova-android 14

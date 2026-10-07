@@ -1,51 +1,91 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug console pane. The background is transparent here on purpose: the smoky
+  layer is painted by the overlay container in OSDebugLogs.attachConsoleOverlay,
+  so it covers the full screen including the system bar inset strips.
+-->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    android:background="#343845"
+    android:background="@android:color/transparent"
     android:orientation="vertical">
 
     <RelativeLayout
         android:id="@+id/menuPanel"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:paddingTop="10dp"
-        android:paddingLeft="10dp"
-        android:paddingRight="10dp">
+        android:paddingBottom="8dp"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:paddingTop="8dp">
 
         <Button
             android:id="@+id/btnClose"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="close" />
+            android:layout_height="36dp"
+            android:layout_alignParentLeft="true"
+            android:background="@drawable/os_console_button"
+            android:minWidth="80dp"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:text="Close"
+            android:textAllCaps="false"
+            android:textColor="#F2F4F7"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/btnCopy"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:layout_centerHorizontal="true"
+            android:background="@drawable/os_console_button"
+            android:minWidth="80dp"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:text="Copy"
+            android:textAllCaps="false"
+            android:textColor="#F2F4F7"
+            android:textSize="13sp" />
 
         <Button
             android:id="@+id/btnClear"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="36dp"
             android:layout_alignParentRight="true"
-            android:text="clear" />
+            android:background="@drawable/os_console_button"
+            android:minWidth="80dp"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:text="Clear"
+            android:textAllCaps="false"
+            android:textColor="#F2F4F7"
+            android:textSize="13sp" />
     </RelativeLayout>
 
     <View
         android:layout_width="fill_parent"
-        android:layout_height="1.0dip"
-        android:layout_marginBottom="4.0dip"
-        android:layout_marginTop="4.0dip"
-        android:background="#ffffff" />
+        android:layout_height="1dp"
+        android:layout_marginBottom="6dp"
+        android:background="#26FFFFFF" />
 
     <ScrollView
         android:id="@+id/outputArea"
         android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        >
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:scrollbars="vertical">
 
         <TextView
             android:id="@+id/txtConsole"
-            android:layout_width="wrap_content"
+            android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:textSize="10.0sp"
-            android:textColor="#ffffff"/>
+            android:fontFamily="monospace"
+            android:paddingBottom="16dp"
+            android:textColor="#E6E6E6"
+            android:textIsSelectable="true"
+            android:textSize="11sp" />
     </ScrollView>
 </LinearLayout>

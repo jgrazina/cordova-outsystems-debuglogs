@@ -8,8 +8,13 @@
 @property (weak, nonatomic) IBOutlet UITextView *outputTextView;
 @property (strong, nonatomic) NSMutableAttributedString* logString;
 @property (weak, nonatomic) UIViewController* parentVC;
+@property (strong, nonatomic) UIView* backdropView;
 
 @end
+
+/** One pill size for every button, so the corner radius reads as a pill. */
+static const CGFloat OSConsoleButtonHeight = 34.0;
+static const CGFloat OSConsoleButtonMinWidth = 84.0;
 
 @implementation OSConsoleViewController
 
@@ -108,25 +113,10 @@
  * crashing.
  */
 -(void)applyModernAppearance {
+    // Transparent: the smoky pane is a separate full-bleed backdrop added to the
+    // parent (see buildBackdrop). This view stays inset by the safe area so the
+    // buttons clear the status bar, while the smoke still covers the whole screen.
     self.view.backgroundColor = [UIColor clearColor];
-
-    // Frosted smoky pane behind everything.
-    UIBlurEffect *effect;
-    if (@available(iOS 13.0, *)) {
-        effect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemThinMaterialDark];
-    } else {
-        effect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleDark];
-    }
-    UIVisualEffectView *blur = [[UIVisualEffectView alloc] initWithEffect:effect];
-    blur.frame = self.view.bounds;
-    blur.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    [self.view insertSubview:blur atIndex:0];
-
-    UIView *tint = [[UIView alloc] initWithFrame:self.view.bounds];
-    tint.backgroundColor = [UIColor colorWithWhite:0.04 alpha:0.45];
-    tint.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    tint.userInteractionEnabled = NO;
-    [self.view insertSubview:tint atIndex:1];
 
     // The toolbar is whichever subview owns the buttons - found by inspection so a
     // nib reshuffle does not break it.
@@ -147,7 +137,16 @@
         toolbar.backgroundColor = [UIColor clearColor];
         for (UIView *inner in toolbar.subviews) {
             if ([inner isKindOfClass:[UIButton class]]) {
-                [self styleButton:(UIButton *)inner];
+                UIButton *existing = (UIButton *)inner;
+                [self styleButton:existing];
+                // The nib gives Close and Clear no explicit size, so they kept
+                // their intrinsic height and the pill radius left them looking
+                // oblong next to Copy. Pin them to the same metrics.
+                existing.translatesAutoresizingMaskIntoConstraints = NO;
+                [NSLayoutConstraint activateConstraints:@[
+                    [existing.heightAnchor constraintEqualToConstant:OSConsoleButtonHeight],
+                    [existing.widthAnchor constraintGreaterThanOrEqualToConstant:OSConsoleButtonMinWidth]
+                ]];
             }
         }
 
@@ -162,8 +161,8 @@
         [NSLayoutConstraint activateConstraints:@[
             [copyBtn.centerXAnchor constraintEqualToAnchor:toolbar.centerXAnchor],
             [copyBtn.topAnchor constraintEqualToAnchor:toolbar.topAnchor constant:20.0],
-            [copyBtn.heightAnchor constraintEqualToConstant:34.0],
-            [copyBtn.widthAnchor constraintGreaterThanOrEqualToConstant:84.0]
+            [copyBtn.heightAnchor constraintEqualToConstant:OSConsoleButtonHeight],
+            [copyBtn.widthAnchor constraintGreaterThanOrEqualToConstant:OSConsoleButtonMinWidth]
         ]];
     }
 
@@ -177,6 +176,37 @@
     }
 }
 
+/**
+ * The smoky pane, built as its own full-screen view rather than a subview of this
+ * controller view. The controller view is inset by the safe area so the buttons
+ * clear the status bar; if the blur lived inside it, the inset strips would show
+ * the app through them, which is exactly the gap this replaces.
+ */
+-(UIView *)buildBackdrop {
+    UIView *backdrop = [[UIView alloc] initWithFrame:CGRectZero];
+    backdrop.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+
+    UIBlurEffect *effect;
+    if (@available(iOS 13.0, *)) {
+        effect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemThinMaterialDark];
+    } else {
+        effect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleDark];
+    }
+    UIVisualEffectView *blur = [[UIVisualEffectView alloc] initWithEffect:effect];
+    blur.frame = backdrop.bounds;
+    blur.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [backdrop addSubview:blur];
+
+    UIView *tint = [[UIView alloc] initWithFrame:backdrop.bounds];
+    tint.backgroundColor = [UIColor colorWithWhite:0.04 alpha:0.45];
+    tint.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [backdrop addSubview:tint];
+
+    // Swallow taps so they do not reach the app behind the console.
+    backdrop.userInteractionEnabled = YES;
+    return backdrop;
+}
+
 /** Pill button matching the Android console. */
 -(void)styleButton:(UIButton *)button {
     if (button == nil) {
@@ -185,7 +215,7 @@
     button.backgroundColor = [UIColor colorWithWhite:1.0 alpha:0.12];
     [button setTitleColor:[UIColor colorWithWhite:0.95 alpha:1.0] forState:UIControlStateNormal];
     button.titleLabel.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightMedium];
-    button.layer.cornerRadius = 17.0;
+    button.layer.cornerRadius = OSConsoleButtonHeight / 2.0;
     button.layer.borderWidth = 1.0;
     button.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.25].CGColor;
     button.clipsToBounds = YES;
@@ -259,14 +289,24 @@
         }
         
         
+        if (self.backdropView == nil) {
+            self.backdropView = [self buildBackdrop];
+        }
+        // Full parent bounds, deliberately NOT inset. This is what closes the
+        // gap in the safe-area strips while leaving the buttons where they are.
+        self.backdropView.frame = _parentVC.view.bounds;
+
         if( ![[_parentVC.view subviews]containsObject: self.view]) {
             if (animated) {
                 // animation with a simple fade
                 self.view.alpha = 0.0f;
+                self.backdropView.alpha = 0.0f;
 
+                [_parentVC.view addSubview:self.backdropView];
                 [_parentVC.view addSubview:self.view];
                 [UIView animateWithDuration:0.3 animations:^{
                     _parentVC.view.userInteractionEnabled = NO;
+                    self.backdropView.alpha = 1.0f;
                     self.view.alpha = 1.0f;
                     
                 }                completion:^(BOOL finished) {
@@ -274,7 +314,8 @@
                     [self onShow];
                 }];
             } else {
-                // no animation so we just add the view as subview
+                // no animation so we just add the views as subviews
+                [_parentVC.view addSubview:self.backdropView];
                 [_parentVC.view addSubview:self.view];
                 [self onShow];
             }
@@ -298,15 +339,18 @@
                     [UIView animateWithDuration:0.3 animations:^{
                         _parentVC.view.userInteractionEnabled = NO;
                         vc.view.alpha = 0.0f;
+                        self.backdropView.alpha = 0.0f;
                         
                     } completion:^(BOOL finished) {
                         _parentVC.view.userInteractionEnabled = YES;
                         [vc.view removeFromSuperview];
+                        [self.backdropView removeFromSuperview];
                         [self onHide];
                     }];
                 } else {
-                    // no animation so we just add the view as subview
+                    // no animation so we just remove the views
                     [vc.view removeFromSuperview];
+                    [self.backdropView removeFromSuperview];
                 }
                 //[vc removeFromParentViewController];
             }

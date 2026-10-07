@@ -28,7 +28,7 @@ public class OSDebugLogs extends CordovaPlugin {
     private ViewGroup consoleViewGroup;
 
     /**
-     * Stands in for org.apache.cordova.isDebuggable(), which cordova-android 14
+     * Stands in for org.apache.cordova.BuildConfig.DEBUG, which cordova-android 14
      * (AGP 8) no longer generates for CordovaLib. Reads the host application's
      * debuggable flag at runtime, which is equivalent for guarding debug logging.
      */

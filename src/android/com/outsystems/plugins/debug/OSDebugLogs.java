@@ -1,5 +1,6 @@
 package com.outsystems.plugins.debug;
 
+import android.content.pm.ApplicationInfo;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,7 +11,6 @@ import android.widget.RelativeLayout;
 import com.outsystems.plugins.debug.console.OSConsole;
 import com.outsystems.plugins.loader.clients.ChromeClient;
 
-import org.apache.cordova.BuildConfig;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaActivity;
 import org.apache.cordova.CordovaInterface;
@@ -27,9 +27,23 @@ public class OSDebugLogs extends CordovaPlugin {
 
     private ViewGroup consoleViewGroup;
 
+    /**
+     * Stands in for org.apache.cordova.isDebuggable(), which cordova-android 14
+     * (AGP 8) no longer generates for CordovaLib. Reads the host application's
+     * debuggable flag at runtime, which is equivalent for guarding debug logging.
+     */
+    private boolean isDebuggable() {
+        try {
+            ApplicationInfo info = this.cordova.getActivity().getApplicationInfo();
+            return (info.flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
 	@Override
 	protected void pluginInitialize() {
-		if(BuildConfig.DEBUG) {
+		if(isDebuggable()) {
 			Log.d(this.getClass().getName(), "Plugin Initialize: started");
 		}
 
@@ -72,7 +86,7 @@ public class OSDebugLogs extends CordovaPlugin {
         });
 
 
-		if(BuildConfig.DEBUG) {
+		if(isDebuggable()) {
 			Log.d(this.getClass().getName(), "Plugin Initialize: finished");
 		}
 	}
